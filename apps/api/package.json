@@ -1,0 +1,28 @@
+{
+  "name": "@news-aggregator/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json --noEmit",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "seed:dev-admin": "tsx src/seed-dev-admin.ts",
+    "start": "tsx src/server.ts"
+  },
+  "dependencies": {
+    "@better-auth/drizzle-adapter": "^1.4.0",
+    "@hono/node-server": "^1.14.2",
+    "@news-aggregator/db": "workspace:*",
+    "better-auth": "^1.4.0",
+    "drizzle-orm": "^0.45.2",
+    "fast-xml-parser": "^5.3.2",
+    "hono": "^4.7.10",
+    "postgres": "^3.4.5",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

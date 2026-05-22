@@ -1,0 +1,23 @@
+{
+  "name": "news-aggregator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @news-aggregator/api --filter @news-aggregator/web dev",
+    "build": "pnpm -r build",
+    "check": "pnpm -r check",
+    "db:generate": "pnpm --filter @news-aggregator/db db:generate",
+    "db:migrate": "pnpm --filter @news-aggregator/db db:migrate",
+    "dev:docker": "docker compose -f docker-compose.dev.yml up -d",
+    "stack:docker": "docker compose up --build",
+    "seed:dev-admin": "pnpm --filter @news-aggregator/api seed:dev-admin",
+    "infra:up": "docker compose up -d postgres",
+    "infra:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "typescript": "^5.8.3"
+  }
+}

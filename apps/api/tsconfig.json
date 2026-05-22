@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@news-aggregator/db": ["../../packages/db/src/index.ts"],
+      "@news-aggregator/db/schema": ["../../packages/db/src/schema.ts"]
+    }
+  },
+  "include": ["src"]
+}

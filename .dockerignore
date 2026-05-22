@@ -1,0 +1,9 @@
+node_modules
+apps/*/node_modules
+packages/*/node_modules
+.pnpm-store
+dist
+build
+.git
+.DS_Store
+*.log
