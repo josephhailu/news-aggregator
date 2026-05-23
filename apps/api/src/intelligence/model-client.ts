@@ -10,8 +10,11 @@ export type ModelResult = {
 
 const DEFAULT_MODEL = "llama3.2:1b";
 const DEFAULT_KEEP_ALIVE = "30m";
-const DEFAULT_NUM_CTX = 8192;
+const DEFAULT_NUM_CTX = 4096;
 const DEFAULT_TEMPERATURE = 0.2;
+const DEFAULT_NUM_PREDICT = 384;
+const DEFAULT_CHAT_TIMEOUT_MS = 240_000;
+const DEFAULT_PREWARM_TIMEOUT_MS = 45_000;
 
 export function getConfiguredModelId() {
   return process.env.OLLAMA_MODEL ?? DEFAULT_MODEL;
@@ -25,9 +28,15 @@ function getBaseUrl() {
   return process.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
 }
 
+function getChatTimeoutMs() {
+  const raw = Number(process.env.OLLAMA_CHAT_TIMEOUT_MS ?? DEFAULT_CHAT_TIMEOUT_MS);
+  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_CHAT_TIMEOUT_MS;
+}
+
 export async function runLocalChat(messages: ModelMessage[]): Promise<ModelResult> {
   const model = getConfiguredModelId();
   const baseUrl = getBaseUrl();
+  const timeoutMs = getChatTimeoutMs();
   let response: Response;
 
   try {
@@ -44,15 +53,14 @@ export async function runLocalChat(messages: ModelMessage[]): Promise<ModelResul
         keep_alive: getConfiguredKeepAlive(),
         options: {
           temperature: DEFAULT_TEMPERATURE,
-          num_ctx: DEFAULT_NUM_CTX
+          num_ctx: DEFAULT_NUM_CTX,
+          num_predict: DEFAULT_NUM_PREDICT
         }
       }),
-      signal: AbortSignal.timeout(120_000)
+      signal: AbortSignal.timeout(timeoutMs)
     });
-  } catch {
-    throw new Error(
-      `Local AI runtime is unavailable at ${baseUrl}. Start Ollama and run: ollama pull ${model}`
-    );
+  } catch (error) {
+    throw new Error(formatRuntimeError(error, baseUrl, model, timeoutMs));
   }
 
   if (!response.ok) {
@@ -99,7 +107,7 @@ export async function prewarmLocalModel() {
           num_predict: 8
         }
       }),
-      signal: AbortSignal.timeout(45_000)
+      signal: AbortSignal.timeout(DEFAULT_PREWARM_TIMEOUT_MS)
     });
 
     if (!response.ok) {
@@ -113,4 +121,14 @@ export async function prewarmLocalModel() {
         : `Unable to prewarm local AI runtime at ${baseUrl} for ${model}`
     );
   }
+}
+
+function formatRuntimeError(error: unknown, baseUrl: string, model: string, timeoutMs: number) {
+  if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
+    return `Local model request timed out after ${Math.round(
+      timeoutMs / 1000
+    )}s while generating a policy read at ${baseUrl} using ${model}.`;
+  }
+
+  return `Local AI runtime is unavailable at ${baseUrl}. Start Ollama and run: ollama pull ${model}`;
 }
