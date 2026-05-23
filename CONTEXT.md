@@ -72,6 +72,10 @@ _Avoid_: Accuracy score, vibes check
 A comparison of **Model Candidates** for the **Policy Macro Read** use case using **Model Run Metrics** and optional **Model Quality Review**.
 _Avoid_: Benchmark, leaderboard
 
+**Admin User**:
+A signed-in user trusted to manage source ingestion, model evaluation, and other operational controls.
+_Avoid_: Operator, superuser
+
 ## Relationships
 
 - A **Source** is either an **Engagement Source**, an **Official Policy Source**, or a future source type not yet named.
@@ -91,6 +95,7 @@ _Avoid_: Benchmark, leaderboard
 - A failed **Policy Read Model Run** still contributes to **Policy Read Model Evaluation**.
 - A **Policy Read Model Run** may receive one or more **Model Quality Reviews**.
 - A **Policy Read Model Evaluation** compares **Model Candidates** for the same read purpose.
+- An **Admin User** may use operational controls such as source ingestion and model evaluation.
 
 ## Example Dialogue
 

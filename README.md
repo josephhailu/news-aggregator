@@ -15,20 +15,26 @@ The first ranking strategy follows the original product idea: collect a recent c
 For day-to-day building, use the hot-reload Docker setup:
 
 ```sh
-pnpm dev:docker
+pnpm dev
 ```
 
-That uses `docker-compose.dev.yml`. PostgreSQL and Ollama run in Docker, but `api` and `web` run from plain Node containers in watch mode with the repo mounted into them. Frontend changes flow through Vite HMR, and backend changes restart automatically through `tsx watch`.
+That uses `docker-compose.dev.yml`. PostgreSQL and Ollama run in Docker, and `api` and `web` run from plain Node containers in watch mode with the repo mounted into them. Frontend changes flow through Vite HMR, and backend changes restart automatically through `tsx watch`.
 
 The first dev startup still needs to install dependencies into named volumes, but after that the normal edit loop should not require image rebuilds or stack restarts for ordinary code changes.
 
-If you want the more deployment-like stack, use:
+To follow the running app logs:
+
+```sh
+pnpm dev:logs
+```
+
+If you want the more deployment-like image stack for a packaging check, use:
 
 ```sh
 pnpm stack:docker
 ```
 
-That starts PostgreSQL, Ollama, the API, and the web app as regular containers. The `ollama-pull` setup service pulls `llama3.2:1b` the first time, so initial startup can take a while. The API container runs migrations and seeds the local dev account before starting.
+That starts PostgreSQL, Ollama, the API, and the web app from built images. It is not the normal development path because source edits are copied into the image at build time, so you must rebuild to see changes. The `ollama-pull` setup service pulls `llama3.2:1b` the first time, so initial startup can take a while. The API container runs migrations and seeds the local dev account before starting.
 
 The web app runs on `http://localhost:5173` and the API runs on `http://localhost:4000`.
 
@@ -52,7 +58,7 @@ email: admin@local.test
 password: devpassword123
 ```
 
-Override these with `DEV_ADMIN_EMAIL`, `DEV_ADMIN_PASSWORD`, and `DEV_ADMIN_NAME`. This account is only a local operator account; the app does not have roles yet, so protected development actions currently require any signed-in user.
+Override these with `DEV_ADMIN_EMAIL`, `DEV_ADMIN_PASSWORD`, and `DEV_ADMIN_NAME`. This account is seeded with the `admin` role and can use operational source refresh controls. New registered accounts default to the regular `user` role.
 
 ## Local AI
 
@@ -79,7 +85,7 @@ The API caches extracted article text and structured insights in PostgreSQL by a
 
 For official policy sources, the read pipeline no longer treats the landing page as the only thing worth summarizing. Ingestion discovers a one-hop **Source Packet** from authoritative same-source links, packet members are stored explicitly, and the AI reads a cached **Packet Digest** that can prefer linked PDFs, statements, minutes, or reports over thin wrapper pages.
 
-Source refreshes, feed refreshes, AI generation, and bookmarks require a signed-in user. Anonymous visitors can read feeds and cached insights.
+Source refreshes and feed refreshes require an admin user. AI generation and bookmarks require a signed-in user. Anonymous visitors can read feeds and cached insights.
 
 ## First Useful Calls
 
