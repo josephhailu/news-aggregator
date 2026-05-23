@@ -115,6 +115,36 @@ export const bankOfCanadaAdapter: SourceAdapter = {
   homepageUrl: "https://www.bankofcanada.ca/core-functions/monetary-policy/",
   sourceKind: "official_policy",
   availableReads: ["policy_macro"],
+  sourcePacketConfig: {
+    allowedHosts: ["bankofcanada.ca", "www.bankofcanada.ca"],
+    linkRules: [
+      {
+        pattern: /\b(statement|interest rate announcement|press release)\b/i,
+        memberKind: "statement",
+        priority: 10
+      },
+      {
+        pattern: /\b(summary of deliberations|minutes)\b/i,
+        memberKind: "minutes",
+        priority: 20
+      },
+      {
+        pattern: /\b(monetary policy report|mpr|projection|outlook)\b/i,
+        memberKind: "projection",
+        priority: 30
+      },
+      {
+        pattern: /\b(pdf|report|backgrounder)\b/i,
+        memberKind: "report",
+        priority: 40
+      },
+      {
+        pattern: /\b(appendix|supplement|technical note)\b/i,
+        memberKind: "appendix",
+        priority: 50
+      }
+    ]
+  },
   async fetchTopArticles(): Promise<SourceArticleInput[]> {
     const feedItems = (await Promise.all(BANK_OF_CANADA_FEEDS.map(fetchFeed))).flat();
     const seen = new Set<string>();
