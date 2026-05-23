@@ -16,6 +16,13 @@ import {
   InsightError
 } from "./intelligence/fed-insight";
 import { getConfiguredKeepAlive, getConfiguredModelId, prewarmLocalModel } from "./intelligence/model-client";
+import {
+  createModelQualityReview,
+  listModelQualityReviews,
+  listRecentPolicyReadModelRuns,
+  modelQualityReviewInputSchema,
+  policyReadModelRunExists
+} from "./intelligence/model-runs";
 import { ingestFromAdapter } from "./services/ingestion";
 import { getFeed, isFeedKey, refreshRankedFeeds } from "./services/ranking";
 
@@ -143,6 +150,47 @@ app.get("/api/feeds/:feedKey", async (c) => {
   const user = c.get("user");
   const items = await getFeed(feedKey, user?.id);
   return c.json({ feedKey, items });
+});
+
+app.get("/api/model-runs/policy-reads", async (c) => {
+  const authError = requireAdmin(c);
+  if (authError) return authError;
+
+  const limit = Number(c.req.query("limit") ?? 25);
+  const runs = await listRecentPolicyReadModelRuns(Number.isFinite(limit) ? limit : 25);
+  return c.json({ runs });
+});
+
+app.get("/api/model-runs/policy-reads/:runId/reviews", async (c) => {
+  const authError = requireAdmin(c);
+  if (authError) return authError;
+
+  const runId = c.req.param("runId");
+  if (!(await policyReadModelRunExists(runId))) {
+    return c.json({ error: "Model run not found" }, 404);
+  }
+
+  const reviews = await listModelQualityReviews(runId);
+  return c.json({ reviews });
+});
+
+app.post("/api/model-runs/policy-reads/:runId/reviews", async (c) => {
+  const authError = requireAdmin(c);
+  if (authError) return authError;
+
+  const runId = c.req.param("runId");
+  if (!(await policyReadModelRunExists(runId))) {
+    return c.json({ error: "Model run not found" }, 404);
+  }
+
+  const body = await c.req.json().catch(() => null);
+  const parsed = modelQualityReviewInputSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: "Invalid review", issues: parsed.error.issues }, 400);
+  }
+
+  const review = await createModelQualityReview(runId, c.get("user")!.id, parsed.data);
+  return c.json({ review }, 201);
 });
 
 app.get("/api/articles/:articleId/insights/fed", async (c) => {

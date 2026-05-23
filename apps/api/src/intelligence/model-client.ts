@@ -6,6 +6,7 @@ export type ModelMessage = {
 export type ModelResult = {
   modelId: string;
   content: string;
+  latencyMs: number;
 };
 
 const DEFAULT_MODEL = "llama3.2:1b";
@@ -15,6 +16,23 @@ const DEFAULT_TEMPERATURE = 0.2;
 const DEFAULT_NUM_PREDICT = 384;
 const DEFAULT_CHAT_TIMEOUT_MS = 240_000;
 const DEFAULT_PREWARM_TIMEOUT_MS = 45_000;
+
+export type ModelCandidateRuntime = {
+  provider: "ollama";
+  runtime: "local";
+  modelId: string;
+  generationSettings: {
+    baseUrl: string;
+    keepAlive: string;
+    format: "json";
+    timeoutMs: number;
+    options: {
+      temperature: number;
+      num_ctx: number;
+      num_predict: number;
+    };
+  };
+};
 
 export function getConfiguredModelId() {
   return process.env.OLLAMA_MODEL ?? DEFAULT_MODEL;
@@ -33,10 +51,30 @@ function getChatTimeoutMs() {
   return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_CHAT_TIMEOUT_MS;
 }
 
+export function getConfiguredModelCandidateRuntime(): ModelCandidateRuntime {
+  return {
+    provider: "ollama",
+    runtime: "local",
+    modelId: getConfiguredModelId(),
+    generationSettings: {
+      baseUrl: getBaseUrl(),
+      keepAlive: getConfiguredKeepAlive(),
+      format: "json",
+      timeoutMs: getChatTimeoutMs(),
+      options: {
+        temperature: DEFAULT_TEMPERATURE,
+        num_ctx: DEFAULT_NUM_CTX,
+        num_predict: DEFAULT_NUM_PREDICT
+      }
+    }
+  };
+}
+
 export async function runLocalChat(messages: ModelMessage[]): Promise<ModelResult> {
   const model = getConfiguredModelId();
   const baseUrl = getBaseUrl();
   const timeoutMs = getChatTimeoutMs();
+  const startedAt = performance.now();
   let response: Response;
 
   try {
@@ -74,7 +112,7 @@ export async function runLocalChat(messages: ModelMessage[]): Promise<ModelResul
     throw new Error("Local model returned an empty response");
   }
 
-  return { modelId: model, content };
+  return { modelId: model, content, latencyMs: Math.round(performance.now() - startedAt) };
 }
 
 export async function prewarmLocalModel() {

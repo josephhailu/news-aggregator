@@ -251,6 +251,91 @@ export const articleInsights = pgTable(
   })
 );
 
+export const modelCandidates = pgTable(
+  "model_candidates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    candidateKey: text("candidate_key").notNull().unique(),
+    readType: text("read_type").notNull(),
+    provider: text("provider").notNull(),
+    runtime: text("runtime").notNull(),
+    modelId: text("model_id").notNull(),
+    promptVersion: text("prompt_version").notNull(),
+    generationSettings: jsonb("generation_settings")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => ({
+    modelCandidateReadIdx: index("model_candidates_read_type_idx").on(table.readType)
+  })
+);
+
+export const policyReadModelRuns = pgTable(
+  "policy_read_model_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => articles.id, { onDelete: "cascade" }),
+    modelCandidateId: uuid("model_candidate_id")
+      .notNull()
+      .references(() => modelCandidates.id, { onDelete: "restrict" }),
+    articleInsightId: uuid("article_insight_id").references(() => articleInsights.id, {
+      onDelete: "set null"
+    }),
+    status: text("status").notNull(),
+    failureReason: text("failure_reason"),
+    readBasis: text("read_basis"),
+    rawResponse: text("raw_response"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true })
+  },
+  (table) => ({
+    policyRunCreatedIdx: index("policy_read_model_runs_created_at_idx").on(table.createdAt),
+    policyRunArticleIdx: index("policy_read_model_runs_article_id_idx").on(table.articleId),
+    policyRunCandidateIdx: index("policy_read_model_runs_model_candidate_id_idx").on(
+      table.modelCandidateId
+    )
+  })
+);
+
+export const modelRunMetrics = pgTable("model_run_metrics", {
+  runId: uuid("run_id")
+    .primaryKey()
+    .references(() => policyReadModelRuns.id, { onDelete: "cascade" }),
+  totalDurationMs: integer("total_duration_ms").notNull(),
+  modelLatencyMs: integer("model_latency_ms"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+});
+
+export const modelQualityReviews = pgTable(
+  "model_quality_reviews",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => policyReadModelRuns.id, { onDelete: "cascade" }),
+    reviewerUserId: text("reviewer_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    useful: boolean("useful").notNull(),
+    grounded: boolean("grounded").notNull(),
+    clear: boolean("clear").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => ({
+    modelQualityRunIdx: index("model_quality_reviews_run_id_idx").on(table.runId),
+    modelQualityReviewerIdx: index("model_quality_reviews_reviewer_user_id_idx").on(
+      table.reviewerUserId
+    )
+  })
+);
+
 export const bookmarks = pgTable(
   "bookmarks",
   {
@@ -282,6 +367,7 @@ export const articlesRelations = relations(articles, ({ one, many }) => ({
   packetMembers: many(sourcePacketMembers),
   packetDigest: one(packetDigests),
   insights: many(articleInsights),
+  policyReadModelRuns: many(policyReadModelRuns),
   bookmarks: many(bookmarks)
 }));
 
@@ -306,17 +392,58 @@ export const packetDigestsRelations = relations(packetDigests, ({ one }) => ({
   })
 }));
 
-export const articleInsightsRelations = relations(articleInsights, ({ one }) => ({
+export const articleInsightsRelations = relations(articleInsights, ({ one, many }) => ({
   article: one(articles, {
     fields: [articleInsights.articleId],
     references: [articles.id]
-  })
+  }),
+  policyReadModelRuns: many(policyReadModelRuns)
 }));
 
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
-  bookmarks: many(bookmarks)
+  bookmarks: many(bookmarks),
+  modelQualityReviews: many(modelQualityReviews)
+}));
+
+export const modelCandidatesRelations = relations(modelCandidates, ({ many }) => ({
+  policyReadModelRuns: many(policyReadModelRuns)
+}));
+
+export const policyReadModelRunsRelations = relations(policyReadModelRuns, ({ one, many }) => ({
+  article: one(articles, {
+    fields: [policyReadModelRuns.articleId],
+    references: [articles.id]
+  }),
+  modelCandidate: one(modelCandidates, {
+    fields: [policyReadModelRuns.modelCandidateId],
+    references: [modelCandidates.id]
+  }),
+  articleInsight: one(articleInsights, {
+    fields: [policyReadModelRuns.articleInsightId],
+    references: [articleInsights.id]
+  }),
+  metrics: one(modelRunMetrics),
+  qualityReviews: many(modelQualityReviews)
+}));
+
+export const modelRunMetricsRelations = relations(modelRunMetrics, ({ one }) => ({
+  run: one(policyReadModelRuns, {
+    fields: [modelRunMetrics.runId],
+    references: [policyReadModelRuns.id]
+  })
+}));
+
+export const modelQualityReviewsRelations = relations(modelQualityReviews, ({ one }) => ({
+  run: one(policyReadModelRuns, {
+    fields: [modelQualityReviews.runId],
+    references: [policyReadModelRuns.id]
+  }),
+  reviewer: one(user, {
+    fields: [modelQualityReviews.reviewerUserId],
+    references: [user.id]
+  })
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({

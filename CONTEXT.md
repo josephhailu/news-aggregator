@@ -52,6 +52,26 @@ _Avoid_: Raw packet dump, merged blob, full text prompt
 An in-house AI explanation of a directly accessible **Central Bank Policy Release** for macro and market-learning context.
 _Avoid_: AI summary, generic insight
 
+**Policy Read Model Run**:
+One successful or failed attempt to produce a **Policy Macro Read** from a specific source input using a specific model and prompt contract.
+_Avoid_: Model call, AI request
+
+**Model Candidate**:
+A selectable model configuration for producing a **Policy Macro Read**, including the runtime, model identifier, and generation settings.
+_Avoid_: Model name, provider
+
+**Model Run Metrics**:
+Observed facts about a **Policy Read Model Run** that help compare operational behavior.
+_Avoid_: Model performance, telemetry
+
+**Model Quality Review**:
+A human or rubric-based judgment of whether a **Policy Macro Read** is useful, grounded, and clear enough for the reader.
+_Avoid_: Accuracy score, vibes check
+
+**Policy Read Model Evaluation**:
+A comparison of **Model Candidates** for the **Policy Macro Read** use case using **Model Run Metrics** and optional **Model Quality Review**.
+_Avoid_: Benchmark, leaderboard
+
 **Admin User**:
 A signed-in user trusted to manage source ingestion, model evaluation, and other operational controls.
 _Avoid_: Operator, superuser
@@ -69,6 +89,12 @@ _Avoid_: Operator, superuser
 - A **Policy Macro Read** should disclose its **Read Basis**.
 - A **Central Bank Policy Release** with **Direct Article Access** can receive a **Policy Macro Read**.
 - A **Fed Macro Read** is the first **Policy Macro Read** implementation.
+- A **Policy Macro Read** may be produced by one or more **Policy Read Model Runs**.
+- A **Policy Read Model Run** uses exactly one **Model Candidate**.
+- A **Policy Read Model Run** may have one **Model Run Metrics** record.
+- A failed **Policy Read Model Run** still contributes to **Policy Read Model Evaluation**.
+- A **Policy Read Model Run** may receive one or more **Model Quality Reviews**.
+- A **Policy Read Model Evaluation** compares **Model Candidates** for the same read purpose.
 - An **Admin User** may use operational controls such as source ingestion and model evaluation.
 
 ## Example Dialogue
@@ -79,3 +105,4 @@ _Avoid_: Operator, superuser
 ## Flagged Ambiguities
 
 - "AI insight" is too broad today. Use **Fed Macro Read** for the current feature until a second real insight type exists.
+- "model performance" is too broad. Use **Model Run Metrics** for operational measurements and **Model Quality Review** for answer-quality judgments.
