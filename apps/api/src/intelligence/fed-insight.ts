@@ -3,7 +3,16 @@ import { articleInsights, articles, packetDigests, sources } from "@news-aggrega
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { getSourceMetadata } from "../adapters/registry";
-import { getConfiguredModelId, runLocalChat } from "./model-client";
+import {
+  getConfiguredModelId,
+  getConfiguredModelCandidateRuntime,
+  runLocalChat
+} from "./model-client";
+import {
+  classifyModelRunFailure,
+  completePolicyReadModelRun,
+  startPolicyReadModelRun
+} from "./model-runs";
 import { getSourcePacketDigest, type ReadBasis } from "./source-packets";
 
 export const POLICY_MACRO_READ_TYPE = "policy_macro";
@@ -102,17 +111,28 @@ async function generatePolicyMacroRead(
   articleId: string,
   modelId: string
 ): Promise<PolicyMacroRead> {
+  const totalStartedAt = performance.now();
   const article = await getPolicyMacroArticle(articleId);
-  const packetDigest = await getSourcePacketDigest(articleId);
-  const prompt = buildPolicyMacroPrompt(
-    article.sourceName,
-    article.title,
-    packetDigest.readBasis,
-    packetDigest.text
-  );
-  let modelResponse: string;
+  const { runId } = await startPolicyReadModelRun({
+    articleId,
+    readType: POLICY_MACRO_READ_TYPE,
+    promptVersion: POLICY_MACRO_PROMPT_VERSION,
+    candidateRuntime: getConfiguredModelCandidateRuntime()
+  });
+  let modelResponse: string | null = null;
+  let modelLatencyMs: number | null = null;
+  let readBasis: ReadBasis | null = null;
 
   try {
+    const packetDigest = await getSourcePacketDigest(articleId);
+    readBasis = packetDigest.readBasis;
+    const prompt = buildPolicyMacroPrompt(
+      article.sourceName,
+      article.title,
+      packetDigest.readBasis,
+      packetDigest.text
+    );
+
     const result = await runLocalChat([
       {
         role: "system",
@@ -125,50 +145,79 @@ async function generatePolicyMacroRead(
       }
     ]);
     modelResponse = result.content;
-  } catch (error) {
-    throw new InsightError(
-      503,
-      error instanceof Error
-        ? error.message
-        : "Local AI runtime is unavailable. Start Ollama and pull the configured model."
+    modelLatencyMs = result.latencyMs;
+
+    const parsed = policyMacroReadSchema.parse(
+      normalizePolicyMacroRead(parseJsonObject(modelResponse))
     );
-  }
 
-  const parsed = policyMacroReadSchema.parse(
-    normalizePolicyMacroRead(parseJsonObject(modelResponse))
-  );
-
-  await db
-    .insert(articleInsights)
-    .values({
-      articleId,
-      insightType: POLICY_MACRO_READ_TYPE,
-      modelId,
-      promptVersion: POLICY_MACRO_PROMPT_VERSION,
-      result: parsed,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    })
-    .onConflictDoUpdate({
-      target: [
-        articleInsights.articleId,
-        articleInsights.insightType,
-        articleInsights.modelId,
-        articleInsights.promptVersion
-      ],
-      set: {
+    const [insight] = await db
+      .insert(articleInsights)
+      .values({
+        articleId,
+        insightType: POLICY_MACRO_READ_TYPE,
+        modelId,
+        promptVersion: POLICY_MACRO_PROMPT_VERSION,
         result: parsed,
+        createdAt: new Date(),
         updatedAt: new Date()
-      }
+      })
+      .onConflictDoUpdate({
+        target: [
+          articleInsights.articleId,
+          articleInsights.insightType,
+          articleInsights.modelId,
+          articleInsights.promptVersion
+        ],
+        set: {
+          result: parsed,
+          updatedAt: new Date()
+        }
+      })
+      .returning({ id: articleInsights.id });
+    if (!insight) {
+      throw new Error("Policy macro read was saved without returning an insight id");
+    }
+
+    await completePolicyReadModelRun({
+      runId,
+      status: "success",
+      totalDurationMs: performance.now() - totalStartedAt,
+      modelLatencyMs,
+      articleInsightId: insight.id,
+      readBasis
     });
 
-  return {
-    ...parsed,
-    modelId,
-    promptVersion: POLICY_MACRO_PROMPT_VERSION,
-    cached: false,
-    readBasis: packetDigest.readBasis
-  };
+    return {
+      ...parsed,
+      modelId,
+      promptVersion: POLICY_MACRO_PROMPT_VERSION,
+      cached: false,
+      readBasis: packetDigest.readBasis
+    };
+  } catch (error) {
+    const failureReason = classifyModelRunFailure(error);
+    await completePolicyReadModelRun({
+      runId,
+      status: "failure",
+      totalDurationMs: performance.now() - totalStartedAt,
+      modelLatencyMs,
+      failureReason,
+      readBasis,
+      rawResponse: modelResponse
+    });
+
+    if (failureReason === "runtime_unavailable" || failureReason === "timeout") {
+      throw new InsightError(
+        503,
+        error instanceof Error
+          ? error.message
+          : "Local AI runtime is unavailable. Start Ollama and pull the configured model."
+      );
+    }
+
+    throw error;
+  }
 }
 
 async function assertPolicyMacroArticle(articleId: string) {
