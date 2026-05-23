@@ -1,7 +1,7 @@
 import { bankOfCanadaAdapter } from "./bank-of-canada";
 import { federalReserveAdapter } from "./federal-reserve";
 import { hackerNewsAdapter } from "./hacker-news";
-import type { ArticleReadType, SourceAdapter, SourceKind, SourcePacketConfig } from "./types";
+import type { ArticleReadType, SourceAdapter, SourceKind } from "./types";
 
 export const sourceAdapters = [hackerNewsAdapter, federalReserveAdapter, bankOfCanadaAdapter] as const;
 
@@ -10,8 +10,7 @@ const sourceMetadataByKey = new Map(
     adapter.key,
     {
       sourceKind: adapter.sourceKind,
-      availableReads: adapter.availableReads ?? [],
-      sourcePacketConfig: adapter.sourcePacketConfig ?? null
+      availableReads: adapter.availableReads ?? []
     }
   ])
 );
@@ -19,19 +18,13 @@ const sourceMetadataByKey = new Map(
 export function getSourceMetadata(adapterKey: string): {
   sourceKind: SourceKind;
   availableReads: ArticleReadType[];
-  sourcePacketConfig: SourcePacketConfig | null;
 } {
   return (
     sourceMetadataByKey.get(adapterKey) ?? {
       sourceKind: "official_policy",
-      availableReads: [],
-      sourcePacketConfig: null
+      availableReads: []
     }
   );
-}
-
-export function getSourcePacketConfig(adapterKey: string): SourcePacketConfig | null {
-  return getSourceMetadata(adapterKey).sourcePacketConfig;
 }
 
 export function getSourceAdapter(adapterKey: string): SourceAdapter | null {

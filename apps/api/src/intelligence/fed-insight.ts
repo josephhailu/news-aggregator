@@ -1,10 +1,10 @@
 import { db } from "@news-aggregator/db";
-import { articleInsights, articles, packetDigests, sources } from "@news-aggregator/db/schema";
-import { eq } from "drizzle-orm";
+import { articleInsights, articleTexts, articles, sources } from "@news-aggregator/db/schema";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getSourceMetadata } from "../adapters/registry";
+import { getArticleText } from "./article-text";
 import { getConfiguredModelId, runLocalChat } from "./model-client";
-import { getSourcePacketDigest, type ReadBasis } from "./source-packets";
 
 export const POLICY_MACRO_READ_TYPE = "policy_macro";
 export const POLICY_MACRO_PROMPT_VERSION = "policy-macro-v1";
@@ -27,7 +27,7 @@ export type PolicyMacroRead = z.infer<typeof policyMacroReadSchema> & {
   modelId: string;
   promptVersion: string;
   cached: boolean;
-  readBasis: ReadBasis;
+  extractionStatus: "ok" | "summary_only";
 };
 
 export type FedInsight = PolicyMacroRead;
@@ -52,7 +52,7 @@ export async function getCachedPolicyMacroRead(articleId: string): Promise<Polic
     return null;
   }
 
-  const digest = await db.query.packetDigests.findFirst({
+  const text = await db.query.articleTexts.findFirst({
     where: (row, { eq }) => eq(row.articleId, articleId)
   });
 
@@ -61,7 +61,7 @@ export async function getCachedPolicyMacroRead(articleId: string): Promise<Polic
     modelId,
     promptVersion: POLICY_MACRO_PROMPT_VERSION,
     cached: true,
-    readBasis: normalizeReadBasis(digest?.readBasis)
+    extractionStatus: text?.extractionStatus === "ok" ? "ok" : "summary_only"
   };
 }
 
@@ -103,13 +103,8 @@ async function generatePolicyMacroRead(
   modelId: string
 ): Promise<PolicyMacroRead> {
   const article = await getPolicyMacroArticle(articleId);
-  const packetDigest = await getSourcePacketDigest(articleId);
-  const prompt = buildPolicyMacroPrompt(
-    article.sourceName,
-    article.title,
-    packetDigest.readBasis,
-    packetDigest.text
-  );
+  const extraction = await getArticleText(articleId);
+  const prompt = buildPolicyMacroPrompt(article.sourceName, extraction.title, extraction.text);
   let modelResponse: string;
 
   try {
@@ -167,7 +162,7 @@ async function generatePolicyMacroRead(
     modelId,
     promptVersion: POLICY_MACRO_PROMPT_VERSION,
     cached: false,
-    readBasis: packetDigest.readBasis
+    extractionStatus: extraction.extractionStatus
   };
 }
 
@@ -179,7 +174,6 @@ async function getPolicyMacroArticle(articleId: string) {
   const article = await db
     .select({
       id: articles.id,
-      title: articles.title,
       sourceName: sources.name,
       adapterKey: sources.adapterKey
     })
@@ -200,22 +194,12 @@ async function getPolicyMacroArticle(articleId: string) {
   return row;
 }
 
-function buildPolicyMacroPrompt(
-  sourceName: string,
-  title: string,
-  readBasis: ReadBasis,
-  text: string
-) {
+function buildPolicyMacroPrompt(sourceName: string, title: string, text: string) {
   return `
 Analyze this ${sourceName} central bank policy release for an investor with a few years of investing experience who understands tax-advantaged accounts and is learning how macro policy can create second-order market effects.
 
 Do not recommend buying or selling anything. Explain mechanisms and what to watch.
-Your main job is to summarize the primary-source material clearly. If the release is procedural, sparse, or low-signal, it is okay to leave market interpretation fields empty instead of guessing.
-The read basis tells you how substantive the underlying source material is:
-- primary_packet: supporting primary documents materially informed this read
-- primary_page: the release page itself was substantive
-- wrapper_page: only a thin wrapper page was available
-- summary_only: the read had to fall back to summary-like text
+Your main job is to summarize the document clearly. If the release is procedural, sparse, or low-signal, it is okay to leave market interpretation fields empty instead of guessing.
 
 Return JSON with exactly these keys:
 {
@@ -231,25 +215,9 @@ Return JSON with exactly these keys:
 Title:
 ${title}
 
-Read basis:
-${readBasis}
-
-Packet digest:
+Release text:
 ${text}
 `.trim();
-}
-
-function normalizeReadBasis(value: string | null | undefined): ReadBasis {
-  if (
-    value === "primary_page" ||
-    value === "primary_packet" ||
-    value === "wrapper_page" ||
-    value === "summary_only"
-  ) {
-    return value;
-  }
-
-  return "summary_only";
 }
 
 function parseJsonObject(content: string) {

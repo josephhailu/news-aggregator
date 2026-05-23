@@ -46,36 +46,6 @@ export const federalReserveAdapter: SourceAdapter = {
   homepageUrl: "https://www.federalreserve.gov/newsevents/pressreleases/monetary2026.htm",
   sourceKind: "official_policy",
   availableReads: ["policy_macro"],
-  sourcePacketConfig: {
-    allowedHosts: ["federalreserve.gov", "www.federalreserve.gov"],
-    linkRules: [
-      {
-        pattern: /\b(statement|fomc statement|policy statement)\b/i,
-        memberKind: "statement",
-        priority: 10
-      },
-      {
-        pattern: /\b(minutes|meeting minutes|summary of deliberations)\b/i,
-        memberKind: "minutes",
-        priority: 20
-      },
-      {
-        pattern: /\b(projections|dot plot|sep|economic projections)\b/i,
-        memberKind: "projection",
-        priority: 30
-      },
-      {
-        pattern: /\b(pdf|report|balance sheet|implementation note)\b/i,
-        memberKind: "report",
-        priority: 40
-      },
-      {
-        pattern: /\b(appendix|supplement|technical note)\b/i,
-        memberKind: "appendix",
-        priority: 50
-      }
-    ]
-  },
   async fetchTopArticles(): Promise<SourceArticleInput[]> {
     const response = await fetch(FED_MONETARY_POLICY_FEED, {
       headers: {

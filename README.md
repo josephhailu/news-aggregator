@@ -72,12 +72,9 @@ OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=llama3.2:1b
 OLLAMA_KEEP_ALIVE=30m
 OLLAMA_PREWARM=true
-OLLAMA_CHAT_TIMEOUT_MS=240000
 ```
 
 The API caches extracted article text and structured insights in PostgreSQL by article, model, and prompt version. On startup, the API also sends a tiny warm-up request to Ollama and asks Ollama to keep the configured model resident for `OLLAMA_KEEP_ALIVE`, which reduces first-request cold-start pain after the stack comes up. The UI only prefetches cached insights on hover; generation happens when you explicitly click `Analyze`.
-
-For official policy sources, the read pipeline no longer treats the landing page as the only thing worth summarizing. Ingestion discovers a one-hop **Source Packet** from authoritative same-source links, packet members are stored explicitly, and the AI reads a cached **Packet Digest** that can prefer linked PDFs, statements, minutes, or reports over thin wrapper pages.
 
 Source refreshes, feed refreshes, AI generation, and bookmarks require a signed-in user. Anonymous visitors can read feeds and cached insights.
 
@@ -98,7 +95,3 @@ Source refreshes, feed refreshes, AI generation, and bookmarks require a signed-
 ## Product Notes
 
 User submissions are intentionally deferred, but the schema supports user-originated sources later through `source_type`. Comments/discussion are also deferred; bookmarks are the first authenticated user feature.
-
-## Architecture Decisions
-
-- [ADR 0001: Source Packet-Based Policy Macro Reads](./docs/adr/0001-source-packet-policy-macro-reads.md)
