@@ -16,6 +16,7 @@ import {
 
 export const sourceType = pgEnum("source_type", ["external", "user"]);
 export const feedWindow = pgEnum("feed_window", ["top_now", "today", "week", "latest"]);
+export const userRole = pgEnum("user_role", ["user", "admin"]);
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -23,6 +24,7 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  role: userRole("role").notNull().default("user"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 });

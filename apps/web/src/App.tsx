@@ -40,6 +40,7 @@ export function App() {
   const queryClient = useQueryClient();
   const session = useSession();
   const user = session.data?.user;
+  const isAdmin = user?.role === "admin";
 
   const feedQuery = useQuery({
     queryKey: ["feed", activeFeed, user?.id],
@@ -86,6 +87,11 @@ export function App() {
     const first = feedQuery.data?.items[0];
     return first ? new Date(first.computedAt).toLocaleTimeString([], { timeStyle: "short" }) : null;
   }, [feedQuery.data]);
+  const ingestError =
+    ingestAllMutation.error ??
+    ingestHnMutation.error ??
+    ingestFedMutation.error ??
+    ingestBocMutation.error;
 
   return (
     <main className="min-h-screen bg-paper text-ink">
@@ -105,41 +111,43 @@ export function App() {
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             {updatedAt ? <p className="text-sm text-ink/60">Ranked at {updatedAt}</p> : null}
-            <div className="flex flex-wrap gap-2">
-              <button
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-ink px-4 text-sm font-semibold text-white transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={ingestAllMutation.isPending}
-                onClick={() => ingestAllMutation.mutate()}
-              >
-                {ingestAllMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" />
-                )}
-                Refresh all
-              </button>
-              <button
-                className="inline-flex h-10 items-center justify-center rounded-md border border-ink/15 bg-white px-3 text-sm font-semibold transition hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={ingestHnMutation.isPending}
-                onClick={() => ingestHnMutation.mutate()}
-              >
-                HN
-              </button>
-              <button
-                className="inline-flex h-10 items-center justify-center rounded-md border border-ink/15 bg-white px-3 text-sm font-semibold transition hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={ingestFedMutation.isPending}
-                onClick={() => ingestFedMutation.mutate()}
-              >
-                Fed Policy
-              </button>
-              <button
-                className="inline-flex h-10 items-center justify-center rounded-md border border-ink/15 bg-white px-3 text-sm font-semibold transition hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={ingestBocMutation.isPending}
-                onClick={() => ingestBocMutation.mutate()}
-              >
-                BoC Policy
-              </button>
-            </div>
+            {isAdmin ? (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-ink px-4 text-sm font-semibold text-white transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={ingestAllMutation.isPending}
+                  onClick={() => ingestAllMutation.mutate()}
+                >
+                  {ingestAllMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  Refresh all
+                </button>
+                <button
+                  className="inline-flex h-10 items-center justify-center rounded-md border border-ink/15 bg-white px-3 text-sm font-semibold transition hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={ingestHnMutation.isPending}
+                  onClick={() => ingestHnMutation.mutate()}
+                >
+                  HN
+                </button>
+                <button
+                  className="inline-flex h-10 items-center justify-center rounded-md border border-ink/15 bg-white px-3 text-sm font-semibold transition hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={ingestFedMutation.isPending}
+                  onClick={() => ingestFedMutation.mutate()}
+                >
+                  Fed Policy
+                </button>
+                <button
+                  className="inline-flex h-10 items-center justify-center rounded-md border border-ink/15 bg-white px-3 text-sm font-semibold transition hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={ingestBocMutation.isPending}
+                  onClick={() => ingestBocMutation.mutate()}
+                >
+                  BoC Policy
+                </button>
+              </div>
+            ) : null}
           </div>
         </header>
 
@@ -203,7 +211,21 @@ export function App() {
             {feedQuery.data?.items.length === 0 ? (
               <EmptyState
                 title="Waiting for articles"
-                message="Use Refresh all after the API and database are running. The first import pulls Hacker News plus Federal Reserve and Bank of Canada monetary policy releases."
+                message={
+                  isAdmin
+                    ? "Use Refresh all after the API and database are running. The first import pulls Hacker News plus Federal Reserve and Bank of Canada monetary policy releases."
+                    : "An admin user can refresh sources after the API and database are running. Once populated, the feed is readable here."
+                }
+              />
+            ) : null}
+            {ingestError ? (
+              <EmptyState
+                title="Refresh failed"
+                message={
+                  ingestError instanceof Error
+                    ? ingestError.message
+                    : "The API denied or failed the refresh request."
+                }
               />
             ) : null}
 

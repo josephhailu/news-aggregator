@@ -43,6 +43,7 @@ try {
       update "user"
       set name = ${name},
           email_verified = true,
+          role = 'admin',
           updated_at = now()
       where id = ${userId}
     `;
@@ -94,6 +95,7 @@ try {
         name,
         email,
         email_verified,
+        role,
         created_at,
         updated_at
       ) values (
@@ -101,6 +103,7 @@ try {
         ${name},
         ${email},
         true,
+        'admin',
         now(),
         now()
       )

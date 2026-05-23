@@ -52,7 +52,7 @@ email: admin@local.test
 password: devpassword123
 ```
 
-Override these with `DEV_ADMIN_EMAIL`, `DEV_ADMIN_PASSWORD`, and `DEV_ADMIN_NAME`. This account is only a local operator account; the app does not have roles yet, so protected development actions currently require any signed-in user.
+Override these with `DEV_ADMIN_EMAIL`, `DEV_ADMIN_PASSWORD`, and `DEV_ADMIN_NAME`. This account is seeded with the `admin` role and can use operational source refresh controls. New registered accounts default to the regular `user` role.
 
 ## Local AI
 
@@ -79,7 +79,7 @@ The API caches extracted article text and structured insights in PostgreSQL by a
 
 For official policy sources, the read pipeline no longer treats the landing page as the only thing worth summarizing. Ingestion discovers a one-hop **Source Packet** from authoritative same-source links, packet members are stored explicitly, and the AI reads a cached **Packet Digest** that can prefer linked PDFs, statements, minutes, or reports over thin wrapper pages.
 
-Source refreshes, feed refreshes, AI generation, and bookmarks require a signed-in user. Anonymous visitors can read feeds and cached insights.
+Source refreshes and feed refreshes require an admin user. AI generation and bookmarks require a signed-in user. Anonymous visitors can read feeds and cached insights.
 
 ## First Useful Calls
 
