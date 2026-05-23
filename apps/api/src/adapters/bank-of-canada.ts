@@ -6,8 +6,10 @@ type RssItem = {
   link?: string;
   guid?: string | { "#text"?: string };
   pubDate?: string;
+  "dc:date"?: string;
   description?: string;
   category?: string | string[];
+  "@_rdf:about"?: string;
 };
 
 type RssFeed = {
@@ -15,6 +17,9 @@ type RssFeed = {
     channel?: {
       item?: RssItem | RssItem[];
     };
+  };
+  "rdf:RDF"?: {
+    item?: RssItem | RssItem[];
   };
 };
 
@@ -60,7 +65,13 @@ function readGuid(item: RssItem) {
     return item.guid;
   }
 
-  return item.guid?.["#text"] ?? item.link ?? item.title ?? crypto.randomUUID();
+  return (
+    item.guid?.["#text"] ?? item["@_rdf:about"] ?? item.link ?? item.title ?? crypto.randomUUID()
+  );
+}
+
+function readPublishedAt(item: RssItem) {
+  return new Date(item.pubDate ?? item["dc:date"] ?? Date.now());
 }
 
 function stripHtml(value: string | undefined) {
@@ -100,7 +111,7 @@ async function fetchFeed(feed: (typeof BANK_OF_CANADA_FEEDS)[number]) {
   });
   const parsed = parser.parse(xml) as RssFeed;
 
-  return asArray(parsed.rss?.channel?.item)
+  return [...asArray(parsed.rss?.channel?.item), ...asArray(parsed["rdf:RDF"]?.item)]
     .filter((item) => !feed.filterPolicyItems || isPolicyItem(item))
     .map((item) => ({
       ...item,
@@ -152,7 +163,7 @@ export const bankOfCanadaAdapter: SourceAdapter = {
     return feedItems
       .map((item, index) => {
         const externalId = readGuid(item);
-        const publishedAt = item.pubDate ? new Date(item.pubDate) : new Date();
+        const publishedAt = readPublishedAt(item);
 
         return {
           externalId,
