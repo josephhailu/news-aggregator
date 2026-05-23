@@ -15,20 +15,26 @@ The first ranking strategy follows the original product idea: collect a recent c
 For day-to-day building, use the hot-reload Docker setup:
 
 ```sh
-pnpm dev:docker
+pnpm dev
 ```
 
-That uses `docker-compose.dev.yml`. PostgreSQL and Ollama run in Docker, but `api` and `web` run from plain Node containers in watch mode with the repo mounted into them. Frontend changes flow through Vite HMR, and backend changes restart automatically through `tsx watch`.
+That uses `docker-compose.dev.yml`. PostgreSQL and Ollama run in Docker, and `api` and `web` run from plain Node containers in watch mode with the repo mounted into them. Frontend changes flow through Vite HMR, and backend changes restart automatically through `tsx watch`.
 
 The first dev startup still needs to install dependencies into named volumes, but after that the normal edit loop should not require image rebuilds or stack restarts for ordinary code changes.
 
-If you want the more deployment-like stack, use:
+To follow the running app logs:
+
+```sh
+pnpm dev:logs
+```
+
+If you want the more deployment-like image stack for a packaging check, use:
 
 ```sh
 pnpm stack:docker
 ```
 
-That starts PostgreSQL, Ollama, the API, and the web app as regular containers. The `ollama-pull` setup service pulls `llama3.2:1b` the first time, so initial startup can take a while. The API container runs migrations and seeds the local dev account before starting.
+That starts PostgreSQL, Ollama, the API, and the web app from built images. It is not the normal development path because source edits are copied into the image at build time, so you must rebuild to see changes. The `ollama-pull` setup service pulls `llama3.2:1b` the first time, so initial startup can take a while. The API container runs migrations and seeds the local dev account before starting.
 
 The web app runs on `http://localhost:5173` and the API runs on `http://localhost:4000`.
 
