@@ -58,11 +58,21 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    const message = await response.text();
+    const text = await response.text();
+    const message = parseErrorMessage(text);
     throw new Error(message || `Request failed with ${response.status}`);
   }
 
   return response.json() as Promise<T>;
+}
+
+function parseErrorMessage(text: string) {
+  try {
+    const body = JSON.parse(text) as { error?: unknown };
+    return typeof body.error === "string" ? body.error : text;
+  } catch {
+    return text;
+  }
 }
 
 export function getFeed(feedKey: FeedKey) {

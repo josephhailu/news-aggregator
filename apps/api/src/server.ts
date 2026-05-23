@@ -33,6 +33,17 @@ function requireUser(c: Context<{ Variables: Variables }>) {
   return null;
 }
 
+function requireAdmin(c: Context<{ Variables: Variables }>) {
+  const authError = requireUser(c);
+  if (authError) return authError;
+
+  if (c.get("user")?.role !== "admin") {
+    return c.json({ error: "Admin role required" }, 403);
+  }
+
+  return null;
+}
+
 const webOrigin = process.env.WEB_ORIGIN ?? "http://localhost:5173";
 const port = Number(process.env.API_PORT ?? 4000);
 
@@ -80,7 +91,7 @@ app.get("/api/sources", async (c) => {
 });
 
 app.post("/api/ingest/hacker-news", async (c) => {
-  const authError = requireUser(c);
+  const authError = requireAdmin(c);
   if (authError) return authError;
 
   const ingestion = await ingestFromAdapter(hackerNewsAdapter);
@@ -89,7 +100,7 @@ app.post("/api/ingest/hacker-news", async (c) => {
 });
 
 app.post("/api/ingest/federal-reserve", async (c) => {
-  const authError = requireUser(c);
+  const authError = requireAdmin(c);
   if (authError) return authError;
 
   const ingestion = await ingestFromAdapter(federalReserveAdapter);
@@ -98,7 +109,7 @@ app.post("/api/ingest/federal-reserve", async (c) => {
 });
 
 app.post("/api/ingest/bank-of-canada", async (c) => {
-  const authError = requireUser(c);
+  const authError = requireAdmin(c);
   if (authError) return authError;
 
   const ingestion = await ingestFromAdapter(bankOfCanadaAdapter);
@@ -107,7 +118,7 @@ app.post("/api/ingest/bank-of-canada", async (c) => {
 });
 
 app.post("/api/ingest/all", async (c) => {
-  const authError = requireUser(c);
+  const authError = requireAdmin(c);
   if (authError) return authError;
 
   const ingestions = await Promise.all(sourceAdapters.map((adapter) => ingestFromAdapter(adapter)));
@@ -116,7 +127,7 @@ app.post("/api/ingest/all", async (c) => {
 });
 
 app.post("/api/feeds/refresh", async (c) => {
-  const authError = requireUser(c);
+  const authError = requireAdmin(c);
   if (authError) return authError;
 
   const ranking = await refreshRankedFeeds();

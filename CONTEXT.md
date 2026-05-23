@@ -52,6 +52,10 @@ _Avoid_: Raw packet dump, merged blob, full text prompt
 An in-house AI explanation of a directly accessible **Central Bank Policy Release** for macro and market-learning context.
 _Avoid_: AI summary, generic insight
 
+**Admin User**:
+A signed-in user trusted to manage source ingestion, model evaluation, and other operational controls.
+_Avoid_: Operator, superuser
+
 ## Relationships
 
 - A **Source** is either an **Engagement Source**, an **Official Policy Source**, or a future source type not yet named.
@@ -65,6 +69,7 @@ _Avoid_: AI summary, generic insight
 - A **Policy Macro Read** should disclose its **Read Basis**.
 - A **Central Bank Policy Release** with **Direct Article Access** can receive a **Policy Macro Read**.
 - A **Fed Macro Read** is the first **Policy Macro Read** implementation.
+- An **Admin User** may use operational controls such as source ingestion and model evaluation.
 
 ## Example Dialogue
 
