@@ -2,7 +2,6 @@ import { db } from "@news-aggregator/db";
 import { articleSignals, articles, sources } from "@news-aggregator/db/schema";
 import { count, eq } from "drizzle-orm";
 import type { SourceAdapter } from "../adapters/types";
-import { discoverSourcePacketForArticle } from "../intelligence/source-packets";
 
 export async function ingestFromAdapter(adapter: SourceAdapter) {
   const sourceRows = await db
@@ -88,18 +87,6 @@ export async function ingestFromAdapter(adapter: SourceAdapter) {
           capturedAt: new Date()
         }
       });
-
-    if ((adapter.availableReads ?? []).includes("policy_macro")) {
-      try {
-        await discoverSourcePacketForArticle(articleId);
-      } catch (error) {
-        console.warn(
-          `Source packet discovery skipped for article ${articleId}: ${
-            error instanceof Error ? error.message : "unknown error"
-          }`
-        );
-      }
-    }
   }
 
   const [{ value: available } = { value: 0 }] = await db

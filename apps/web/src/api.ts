@@ -40,7 +40,7 @@ export type PolicyMacroRead = {
   modelId: string;
   promptVersion: string;
   cached: boolean;
-  readBasis: "primary_page" | "primary_packet" | "wrapper_page" | "summary_only";
+  extractionStatus: "ok" | "summary_only";
 };
 
 export type FedInsight = PolicyMacroRead;

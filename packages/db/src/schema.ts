@@ -175,55 +175,6 @@ export const articleTexts = pgTable("article_texts", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 });
 
-export const sourcePacketMembers = pgTable(
-  "source_packet_members",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    articleId: uuid("article_id")
-      .notNull()
-      .references(() => articles.id, { onDelete: "cascade" }),
-    url: text("url").notNull(),
-    title: text("title"),
-    memberKind: text("member_kind").notNull(),
-    mimeType: text("mime_type"),
-    priority: integer("priority").notNull().default(100),
-    trustedHost: boolean("trusted_host").notNull().default(false),
-    isPrimary: boolean("is_primary").notNull().default(false),
-    discoveredFromUrl: text("discovered_from_url"),
-    text: text("text"),
-    extractionStatus: text("extraction_status").notNull().default("pending"),
-    errorMessage: text("error_message"),
-    fetchedAt: timestamp("fetched_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
-  },
-  (table) => ({
-    articleUrlUnique: unique("source_packet_members_article_url_unique").on(
-      table.articleId,
-      table.url
-    ),
-    articlePriorityIdx: index("source_packet_members_article_priority_idx").on(
-      table.articleId,
-      table.priority
-    )
-  })
-);
-
-export const packetDigests = pgTable(
-  "packet_digests",
-  {
-    articleId: uuid("article_id")
-      .primaryKey()
-      .references(() => articles.id, { onDelete: "cascade" }),
-    digestVersion: text("digest_version").notNull(),
-    readBasis: text("read_basis").notNull(),
-    digest: jsonb("digest").$type<Record<string, unknown>>().notNull(),
-    text: text("text").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
-  }
-);
-
 export const articleInsights = pgTable(
   "article_insights",
   {
@@ -277,8 +228,6 @@ export const articlesRelations = relations(articles, ({ one, many }) => ({
   signals: one(articleSignals),
   scores: many(articleScores),
   text: one(articleTexts),
-  packetMembers: many(sourcePacketMembers),
-  packetDigest: one(packetDigests),
   insights: many(articleInsights),
   bookmarks: many(bookmarks)
 }));
@@ -286,20 +235,6 @@ export const articlesRelations = relations(articles, ({ one, many }) => ({
 export const articleTextsRelations = relations(articleTexts, ({ one }) => ({
   article: one(articles, {
     fields: [articleTexts.articleId],
-    references: [articles.id]
-  })
-}));
-
-export const sourcePacketMembersRelations = relations(sourcePacketMembers, ({ one }) => ({
-  article: one(articles, {
-    fields: [sourcePacketMembers.articleId],
-    references: [articles.id]
-  })
-}));
-
-export const packetDigestsRelations = relations(packetDigests, ({ one }) => ({
-  article: one(articles, {
-    fields: [packetDigests.articleId],
     references: [articles.id]
   })
 }));

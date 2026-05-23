@@ -463,7 +463,9 @@ function PolicyMacroReadResult({
               {insight.confidence} confidence
             </span>
             {insight.cached ? <span className="text-xs text-ink/45">cached</span> : null}
-            <span className="text-xs text-ink/45">{formatReadBasis(insight.readBasis)}</span>
+            {insight.extractionStatus === "summary_only" ? (
+              <span className="text-xs text-coral">summary-only text</span>
+            ) : null}
           </div>
           <p className="mt-3 text-sm leading-6 text-ink/80">{insight.plainEnglishSummary}</p>
         </div>
@@ -515,20 +517,6 @@ function InsightList({ title, items }: { title: string; items: string[] }) {
 
 function formatSignal(signal: NonNullable<PolicyMacroRead["policySignal"]>) {
   return signal.replace("_", " ");
-}
-
-function formatReadBasis(readBasis: PolicyMacroRead["readBasis"]) {
-  switch (readBasis) {
-    case "primary_packet":
-      return "based on primary source packet";
-    case "primary_page":
-      return "based on substantive primary page";
-    case "wrapper_page":
-      return "based on wrapper page only";
-    case "summary_only":
-    default:
-      return "based on summary fallback";
-  }
 }
 
 function AuthPanel() {
