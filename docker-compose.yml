@@ -1,3 +1,6 @@
+# Image-based stack for packaging checks.
+# For day-to-day development, use `pnpm dev`, which runs docker-compose.dev.yml
+# with the source tree mounted into the API and web containers.
 services:
   postgres:
     image: postgres:16-alpine
